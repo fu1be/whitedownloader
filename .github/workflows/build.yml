@@ -31,10 +31,10 @@ jobs:
 
       - name: Build EXE with PyInstaller
         run: |
-          pyinstaller --onefile --windowed --name whitedownloader --add-data "yt-dlp.exe;." --add-data "ffmpeg.exe;." --add-data "ffprobe.exe;." --add-data "ResotYgPERSONALUSE.otf;." --add-data "threat.otf;." app.py
+          pyinstaller --onefile --windowed --name whitedownloader --add-data "yt-dlp.exe;." --add-data "ffmpeg.exe;." --add-data "ffprobe.exe;." --add-data "ResotYgPERSONALUSE.otf;." --add-data "Threat.otf;." app.py
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: VideoDownloader-exe
-          path: dist/VideoDownloader.exe
+          name: whitedownloader-exe
+          path: dist/whitedownloader.exe
