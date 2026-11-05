@@ -6,6 +6,7 @@ import threading
 import os
 import sys
 import re
+import pyglet
 
 # ================== НАСТРОЙКИ ПУТЕЙ ==================
 if getattr(sys, 'frozen', False):
@@ -15,18 +16,58 @@ else:
 
 YTDLP_PATH = os.path.join(BASE_DIR, "yt-dlp.exe")
 
+# ================== ЗАГРУЗКА ШРИФТОВ ==================
+# Имена, которые мы будем использовать в коде
+FONT_NAME_HEADER = "resotyg"
+FONT_NAME_TEXT = "threat"
+FALLBACK_FONT = "Segoe UI"
+
+def load_custom_fonts():
+    """Загружает шрифты из папки с программой. Возвращает имена для использования."""
+    fonts_to_load = {
+        "resotyg": ["resotyg.ttf", "resotyg.otf", "Resotyg.ttf", "Resotyg.otf"],
+        "threat": ["threat.ttf", "threat.otf", "Threat.ttf", "Threat.otf"]
+    }
+    
+    loaded_names = {}
+    
+    for name, files in fonts_to_load.items():
+        font_loaded = False
+        for f in files:
+            path = os.path.join(BASE_DIR, f)
+            if os.path.exists(path):
+                try:
+                    pyglet.font.add_file(path)
+                    # В pyglet имя шрифта берется из самого файла.
+                    # Но мы попробуем использовать имя файла без расширения как запасной вариант.
+                    loaded_names[name] = name 
+                    font_loaded = True
+                    break
+                except Exception as e:
+                    print(f"Ошибка загрузки шрифта {f}: {e}")
+        
+        if not font_loaded:
+            loaded_names[name] = FALLBACK_FONT
+            
+    return loaded_names
+
+# Загружаем шрифты и получаем их имена
+FONTS = load_custom_fonts()
+FONT_HEADER = FONTS.get("resotyg", FALLBACK_FONT)
+FONT_TEXT = FONTS.get("threat", FALLBACK_FONT)
+
 # ================== СТИЛИ ==================
 ctk.set_appearance_mode("dark")
 ctk.set_default_color_theme("dark-blue")
 
 # Цветовая палитра (ЧБ + красный акцент)
-BG_COLOR = "#121212"          # Основной фон (почти черный)
-CARD_COLOR = "#1E1E1E"        # Фон карточек
-TEXT_COLOR = "#FFFFFF"        # Белый текст
-SUBTEXT_COLOR = "#A0A0A0"     # Серый текст
-ACCENT_COLOR = "#E53935"      # Красивый красный
-ACCENT_HOVER = "#C62828"      # Темно-красный при наведении
-ENTRY_BG = "#2A2A2A"          # Фон полей ввода
+BG_COLOR = "#121212"          
+CARD_COLOR = "#1E1E1E"        
+TEXT_COLOR = "#FFFFFF"        
+SUBTEXT_COLOR = "#A0A0A0"     
+ACCENT_COLOR = "#E53935"      
+ACCENT_HOVER = "#C62828"      
+ENTRY_BG = "#2A2A2A"          
 
 class App(ctk.CTk):
     def __init__(self):
@@ -41,17 +82,16 @@ class App(ctk.CTk):
         self.is_downloading = False
 
         # --- Заголовок ---
-        # Используем кастомный шрифт, если его нет - возьмется системный
         self.header = ctk.CTkLabel(
             self, text="whitedownloader", 
-            font=ctk.CTkFont(family="resotyg", size=32, weight="bold"),
+            font=ctk.CTkFont(family=FONT_HEADER, size=32, weight="bold"),
             text_color=TEXT_COLOR
         )
         self.header.pack(pady=(25, 5))
 
         self.subtitle = ctk.CTkLabel(
             self, text="Скачивайте видео с YouTube, Twitch и TikTok",
-            font=ctk.CTkFont(family="threat", size=14),
+            font=ctk.CTkFont(family=FONT_TEXT, size=14),
             text_color=SUBTEXT_COLOR
         )
         self.subtitle.pack(pady=(0, 25))
@@ -60,7 +100,7 @@ class App(ctk.CTk):
         self.card_url = ctk.CTkFrame(self, fg_color=CARD_COLOR, corner_radius=15)
         self.card_url.pack(fill="x", padx=40, pady=10)
 
-        self.label_url = ctk.CTkLabel(self.card_url, text="Ссылка на видео", font=ctk.CTkFont(family="threat", size=14, weight="bold"), text_color=TEXT_COLOR)
+        self.label_url = ctk.CTkLabel(self.card_url, text="Ссылка на видео", font=ctk.CTkFont(family=FONT_TEXT, size=14, weight="bold"), text_color=TEXT_COLOR)
         self.label_url.pack(anchor="w", padx=20, pady=(15, 5))
 
         self.entry_url = ctk.CTkEntry(
@@ -74,7 +114,7 @@ class App(ctk.CTk):
         self.card_path = ctk.CTkFrame(self, fg_color=CARD_COLOR, corner_radius=15)
         self.card_path.pack(fill="x", padx=40, pady=10)
 
-        self.label_path = ctk.CTkLabel(self.card_path, text="Папка для сохранения", font=ctk.CTkFont(family="threat", size=14, weight="bold"), text_color=TEXT_COLOR)
+        self.label_path = ctk.CTkLabel(self.card_path, text="Папка для сохранения", font=ctk.CTkFont(family=FONT_TEXT, size=14, weight="bold"), text_color=TEXT_COLOR)
         self.label_path.pack(anchor="w", padx=20, pady=(15, 5))
 
         self.path_frame = ctk.CTkFrame(self.card_path, fg_color="transparent")
@@ -99,7 +139,7 @@ class App(ctk.CTk):
         self.card_time = ctk.CTkFrame(self, fg_color=CARD_COLOR, corner_radius=15)
         self.card_time.pack(fill="x", padx=40, pady=10)
 
-        self.label_time = ctk.CTkLabel(self.card_time, text="Отрезок (необязательно)", font=ctk.CTkFont(family="threat", size=14, weight="bold"), text_color=TEXT_COLOR)
+        self.label_time = ctk.CTkLabel(self.card_time, text="Отрезок (необязательно)", font=ctk.CTkFont(family=FONT_TEXT, size=14, weight="bold"), text_color=TEXT_COLOR)
         self.label_time.pack(anchor="w", padx=20, pady=(15, 5))
 
         self.time_inner = ctk.CTkFrame(self.card_time, fg_color="transparent")
@@ -133,7 +173,7 @@ class App(ctk.CTk):
 
         self.progress_label = ctk.CTkLabel(
             self.progress_frame, text="Готов к скачиванию", 
-            font=ctk.CTkFont(size=12), text_color=SUBTEXT_COLOR
+            font=ctk.CTkFont(family=FONT_TEXT, size=12), text_color=SUBTEXT_COLOR
         )
         self.progress_label.pack(pady=(5, 0))
 
@@ -181,10 +221,8 @@ class App(ctk.CTk):
         service_name, extra_args = self.get_service_folder(url)
         target_folder = os.path.join(self.save_path.get(), service_name)
         
-        # Создаем папки, если их нет
         os.makedirs(target_folder, exist_ok=True)
 
-        # Формируем аргументы
         args = ["-S", "vcodec:h264,res,acodec:m4a", "--merge-output-format", "mp4", "-N", "16"]
         args.extend(extra_args)
 
@@ -200,7 +238,6 @@ class App(ctk.CTk):
         cmd = [YTDLP_PATH] + args
 
         try:
-            # Добавляем --newline, чтобы прогресс выводился построчно, а не одной строкой
             cmd.insert(1, "--newline") 
             
             process = subprocess.Popen(
@@ -209,8 +246,6 @@ class App(ctk.CTk):
                 creationflags=subprocess.CREATE_NO_WINDOW
             )
 
-            # Регулярное выражение для поиска процентов и скорости в логах yt-dlp
-            # Пример лога: [download]  45.2% of  150.00MiB at  2.50MiB/s ETA 00:30
             pattern = re.compile(r"\[download\]\s+([\d\.]+)%\s+of\s+([\d\.]+\w+)\s+at\s+([\d\.]+\w+/s)\s+ETA\s+([\d:]+)")
 
             for line in process.stdout:
@@ -220,7 +255,6 @@ class App(ctk.CTk):
                     speed = match.group(3)
                     eta = match.group(4)
                     
-                    # Обновляем UI из потока
                     self.progress_bar.set(percent)
                     self.progress_label.configure(
                         text=f"{match.group(1)}% • Скорость: {speed} • Осталось: {eta}",
@@ -228,7 +262,7 @@ class App(ctk.CTk):
                     )
                 elif "[ExtractAudio]" in line or "[Merger]" in line:
                     self.progress_label.configure(text="Обработка (склейка/конвертация)...", text_color=SUBTEXT_COLOR)
-                    self.progress_bar.set(0.99) # Показываем, что почти готово
+                    self.progress_bar.set(0.99)
 
             process.wait()
 
