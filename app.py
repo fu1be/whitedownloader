@@ -17,16 +17,14 @@ else:
 YTDLP_PATH = os.path.join(BASE_DIR, "yt-dlp.exe")
 
 # ================== ЗАГРУЗКА ШРИФТОВ ==================
-# Имена, которые мы будем использовать в коде
-FONT_NAME_HEADER = "resotyg"
-FONT_NAME_TEXT = "threat"
 FALLBACK_FONT = "Segoe UI"
 
 def load_custom_fonts():
-    """Загружает шрифты из папки с программой. Возвращает имена для использования."""
+    """Загружает шрифты из папки с программой."""
+    # Точные имена ваших файлов
     fonts_to_load = {
-        "resotyg": ["resotyg.ttf", "resotyg.otf", "Resotyg.ttf", "Resotyg.otf"],
-        "threat": ["threat.ttf", "threat.otf", "Threat.ttf", "Threat.otf"]
+        "resotyg": ["ResotYgPERSONALUSE.otf", "ResotYgPERSONALUSE.ttf"],
+        "threat": ["threat.otf", "Threat.otf", "threat.ttf"]
     }
     
     loaded_names = {}
@@ -38,8 +36,6 @@ def load_custom_fonts():
             if os.path.exists(path):
                 try:
                     pyglet.font.add_file(path)
-                    # В pyglet имя шрифта берется из самого файла.
-                    # Но мы попробуем использовать имя файла без расширения как запасной вариант.
                     loaded_names[name] = name 
                     font_loaded = True
                     break
@@ -51,7 +47,7 @@ def load_custom_fonts():
             
     return loaded_names
 
-# Загружаем шрифты и получаем их имена
+# Загружаем шрифты
 FONTS = load_custom_fonts()
 FONT_HEADER = FONTS.get("resotyg", FALLBACK_FONT)
 FONT_TEXT = FONTS.get("threat", FALLBACK_FONT)
@@ -60,7 +56,6 @@ FONT_TEXT = FONTS.get("threat", FALLBACK_FONT)
 ctk.set_appearance_mode("dark")
 ctk.set_default_color_theme("dark-blue")
 
-# Цветовая палитра (ЧБ + красный акцент)
 BG_COLOR = "#121212"          
 CARD_COLOR = "#1E1E1E"        
 TEXT_COLOR = "#FFFFFF"        
