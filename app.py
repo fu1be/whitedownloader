@@ -1,162 +1,162 @@
 import customtkinter as ctk
 import tkinter as tk
-from tkinter import messagebox
+from tkinter import messagebox, filedialog
 import subprocess
 import threading
 import os
 import sys
+import re
 
 # ================== НАСТРОЙКИ ПУТЕЙ ==================
 if getattr(sys, 'frozen', False):
-    # Если запущено как собранный .exe (PyInstaller распаковывает всё в _MEIPASS)
     BASE_DIR = sys._MEIPASS
-    # Папка, куда сохранять видео (рядом с .exe)
-    OUTPUT_DIR = os.path.dirname(sys.executable)
 else:
-    # Если запущено как .py скрипт
     BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-    OUTPUT_DIR = BASE_DIR
 
 YTDLP_PATH = os.path.join(BASE_DIR, "yt-dlp.exe")
 
-# ================== ТЕМА ==================
-ctk.set_appearance_mode("dark")  # Тёмная тема
-ctk.set_default_color_theme("blue")  # Синий акцент
+# ================== СТИЛИ ==================
+ctk.set_appearance_mode("dark")
+ctk.set_default_color_theme("dark-blue")
+
+# Цветовая палитра (ЧБ + красный акцент)
+BG_COLOR = "#121212"          # Основной фон (почти черный)
+CARD_COLOR = "#1E1E1E"        # Фон карточек
+TEXT_COLOR = "#FFFFFF"        # Белый текст
+SUBTEXT_COLOR = "#A0A0A0"     # Серый текст
+ACCENT_COLOR = "#E53935"      # Красивый красный
+ACCENT_HOVER = "#C62828"      # Темно-красный при наведении
+ENTRY_BG = "#2A2A2A"          # Фон полей ввода
 
 class App(ctk.CTk):
     def __init__(self):
         super().__init__()
 
-        self.title("Video Downloader")
-        self.geometry("900x750")
-        self.minsize(800, 600)
+        self.title("whitedownloader")
+        self.geometry("850x700")
+        self.minsize(750, 650)
+        self.configure(fg_color=BG_COLOR)
+
+        self.save_path = tk.StringVar(value=os.path.join(os.path.expanduser("~"), "Downloads", "whitedownloader"))
+        self.is_downloading = False
 
         # --- Заголовок ---
+        # Используем кастомный шрифт, если его нет - возьмется системный
         self.header = ctk.CTkLabel(
-            self, text="📥 Video Downloader", 
-            font=ctk.CTkFont(size=24, weight="bold")
+            self, text="whitedownloader", 
+            font=ctk.CTkFont(family="resotyg", size=32, weight="bold"),
+            text_color=TEXT_COLOR
         )
-        self.header.pack(pady=(20, 10))
+        self.header.pack(pady=(25, 5))
 
         self.subtitle = ctk.CTkLabel(
-            self, text="Скачивайте видео с YouTube, Twitch и TikTok в один клик",
-            font=ctk.CTkFont(size=13), text_color="gray"
+            self, text="Скачивайте видео с YouTube, Twitch и TikTok",
+            font=ctk.CTkFont(family="threat", size=14),
+            text_color=SUBTEXT_COLOR
         )
-        self.subtitle.pack(pady=(0, 20))
+        self.subtitle.pack(pady=(0, 25))
 
-        # --- Фрейм для ссылки ---
-        self.frame_url = ctk.CTkFrame(self)
-        self.frame_url.pack(fill="x", padx=30, pady=5)
+        # --- Карточка 1: Ссылка ---
+        self.card_url = ctk.CTkFrame(self, fg_color=CARD_COLOR, corner_radius=15)
+        self.card_url.pack(fill="x", padx=40, pady=10)
 
-        self.label_url = ctk.CTkLabel(self.frame_url, text="Ссылка на видео:", font=ctk.CTkFont(size=13, weight="bold"))
-        self.label_url.pack(anchor="w", padx=15, pady=(10, 2))
+        self.label_url = ctk.CTkLabel(self.card_url, text="Ссылка на видео", font=ctk.CTkFont(family="threat", size=14, weight="bold"), text_color=TEXT_COLOR)
+        self.label_url.pack(anchor="w", padx=20, pady=(15, 5))
 
         self.entry_url = ctk.CTkEntry(
-            self.frame_url, placeholder_text="https://www.youtube.com/watch?v=...",
-            height=40, font=ctk.CTkFont(size=13)
+            self.card_url, placeholder_text="https://www.youtube.com/watch?v=...",
+            height=45, font=ctk.CTkFont(size=14),
+            fg_color=ENTRY_BG, border_color="#333333", text_color=TEXT_COLOR
         )
-        self.entry_url.pack(fill="x", padx=15, pady=(0, 15))
+        self.entry_url.pack(fill="x", padx=20, pady=(0, 20))
 
-        # --- Фрейм для времени ---
-        self.frame_time = ctk.CTkFrame(self)
-        self.frame_time.pack(fill="x", padx=30, pady=5)
+        # --- Карточка 2: Путь сохранения ---
+        self.card_path = ctk.CTkFrame(self, fg_color=CARD_COLOR, corner_radius=15)
+        self.card_path.pack(fill="x", padx=40, pady=10)
 
-        self.label_time = ctk.CTkLabel(self.frame_time, text="Отрезок (необязательно, формат ЧЧ:ММ:СС):", font=ctk.CTkFont(size=13, weight="bold"))
-        self.label_time.pack(anchor="w", padx=15, pady=(10, 2))
+        self.label_path = ctk.CTkLabel(self.card_path, text="Папка для сохранения", font=ctk.CTkFont(family="threat", size=14, weight="bold"), text_color=TEXT_COLOR)
+        self.label_path.pack(anchor="w", padx=20, pady=(15, 5))
 
-        self.time_inner = ctk.CTkFrame(self.frame_time, fg_color="transparent")
-        self.time_inner.pack(fill="x", padx=15, pady=(0, 15))
+        self.path_frame = ctk.CTkFrame(self.card_path, fg_color="transparent")
+        self.path_frame.pack(fill="x", padx=20, pady=(0, 20))
 
-        self.label_start = ctk.CTkLabel(self.time_inner, text="С:", font=ctk.CTkFont(size=13))
-        self.label_start.pack(side="left", padx=(0, 5))
+        self.entry_path = ctk.CTkEntry(
+            self.path_frame, textvariable=self.save_path, height=45,
+            font=ctk.CTkFont(size=13), state="readonly",
+            fg_color=ENTRY_BG, border_color="#333333", text_color=SUBTEXT_COLOR
+        )
+        self.entry_path.pack(side="left", fill="x", expand=True, padx=(0, 10))
 
-        self.entry_start = ctk.CTkEntry(self.time_inner, width=100, height=35, placeholder_text="00:00:00")
-        self.entry_start.pack(side="left", padx=(0, 20))
+        self.btn_browse = ctk.CTkButton(
+            self.path_frame, text="Обзор", width=90, height=45,
+            font=ctk.CTkFont(size=14, weight="bold"),
+            fg_color="#333333", hover_color="#444444", text_color=TEXT_COLOR,
+            command=self.browse_folder
+        )
+        self.btn_browse.pack(side="right")
 
-        self.label_end = ctk.CTkLabel(self.time_inner, text="По:", font=ctk.CTkFont(size=13))
-        self.label_end.pack(side="left", padx=(0, 5))
+        # --- Карточка 3: Время ---
+        self.card_time = ctk.CTkFrame(self, fg_color=CARD_COLOR, corner_radius=15)
+        self.card_time.pack(fill="x", padx=40, pady=10)
 
-        self.entry_end = ctk.CTkEntry(self.time_inner, width=100, height=35, placeholder_text="00:00:00")
+        self.label_time = ctk.CTkLabel(self.card_time, text="Отрезок (необязательно)", font=ctk.CTkFont(family="threat", size=14, weight="bold"), text_color=TEXT_COLOR)
+        self.label_time.pack(anchor="w", padx=20, pady=(15, 5))
+
+        self.time_inner = ctk.CTkFrame(self.card_time, fg_color="transparent")
+        self.time_inner.pack(fill="x", padx=20, pady=(0, 20))
+
+        self.entry_start = ctk.CTkEntry(self.time_inner, width=120, height=40, placeholder_text="С: 00:00:00", fg_color=ENTRY_BG, border_color="#333333")
+        self.entry_start.pack(side="left", padx=(0, 15))
+
+        self.entry_end = ctk.CTkEntry(self.time_inner, width=120, height=40, placeholder_text="По: 00:00:00", fg_color=ENTRY_BG, border_color="#333333")
         self.entry_end.pack(side="left")
 
-        # --- Кнопка ---
+        # --- Кнопка Скачать ---
         self.btn_download = ctk.CTkButton(
-            self, text="Скачать", height=45, 
-            font=ctk.CTkFont(size=15, weight="bold"),
+            self, text="Скачать", height=50,
+            font=ctk.CTkFont(size=16, weight="bold"),
+            fg_color=ACCENT_COLOR, hover_color=ACCENT_HOVER, text_color=TEXT_COLOR,
             command=self.start_download
         )
-        self.btn_download.pack(fill="x", padx=30, pady=20)
+        self.btn_download.pack(fill="x", padx=40, pady=25)
 
-        # --- Лог ---
-        self.label_log = ctk.CTkLabel(self, text="Лог выполнения:", font=ctk.CTkFont(size=13, weight="bold"))
-        self.label_log.pack(anchor="w", padx=30)
+        # --- Прогресс-бар ---
+        self.progress_frame = ctk.CTkFrame(self, fg_color="transparent")
+        self.progress_frame.pack(fill="x", padx=40, pady=(0, 25))
 
-        self.log_text = ctk.CTkTextbox(
-            self, height=300, font=ctk.CTkFont(family="Consolas", size=12),
-            fg_color="#1a1a1a", text_color="#a6e3a1"
+        self.progress_bar = ctk.CTkProgressBar(
+            self.progress_frame, height=12, corner_radius=6,
+            fg_color="#2A2A2A", progress_color=ACCENT_COLOR
         )
-        self.log_text.pack(fill="both", expand=True, padx=30, pady=(5, 20))
+        self.progress_bar.set(0)
+        self.progress_bar.pack(fill="x")
 
-    def get_download_args(self, url, start_time, end_time):
+        self.progress_label = ctk.CTkLabel(
+            self.progress_frame, text="Готов к скачиванию", 
+            font=ctk.CTkFont(size=12), text_color=SUBTEXT_COLOR
+        )
+        self.progress_label.pack(pady=(5, 0))
+
+    def browse_folder(self):
+        folder = filedialog.askdirectory(initialdir=self.save_path.get())
+        if folder:
+            self.save_path.set(folder)
+
+    def get_service_folder(self, url):
         url_lower = url.lower()
-        args = ["-S", "vcodec:h264,res,acodec:m4a", "--merge-output-format", "mp4", "-N", "16"]
-
         if "youtube.com" in url_lower or "youtu.be" in url_lower:
-            folder = os.path.join(OUTPUT_DIR, "youtube")
-            args.extend(["--extractor-args", "youtube:player-client=default,-tv_simply"])
+            return "YouTube", ["--extractor-args", "youtube:player-client=default,-tv_simply"]
         elif "twitch.tv" in url_lower:
-            folder = os.path.join(OUTPUT_DIR, "Twitch")
+            return "Twitch", []
         elif "tiktok.com" in url_lower:
-            folder = os.path.join(OUTPUT_DIR, "TikTok")
+            return "TikTok", []
         else:
-            folder = os.path.join(OUTPUT_DIR, "other")
-
-        if start_time and end_time:
-            args.extend(["--download-sections", f"*{start_time}-{end_time}"])
-            filename_template = os.path.join(folder, f"%(title)s [{start_time.replace(':','_')}-{end_time.replace(':','_')}].%(ext)s")
-        else:
-            filename_template = os.path.join(folder, "%(title)s.%(ext)s")
-
-        args.extend(["-o", filename_template])
-        args.append(url.strip())
-        return args, folder
-
-    def download_thread(self, url, start_time, end_time):
-        if not os.path.exists(YTDLP_PATH):
-            self.log(f"❌ Ошибка: yt-dlp.exe не найден по пути {YTDLP_PATH}\n")
-            return
-
-        args, folder = self.get_download_args(url, start_time, end_time)
-        os.makedirs(folder, exist_ok=True)
-        cmd = [YTDLP_PATH] + args
-
-        self.log(f"\n▶ Скачиваю: {url}\n")
-        if start_time and end_time:
-            self.log(f"  Отрезок: {start_time} - {end_time}\n")
-        self.log(f"  Папка: {folder}\n")
-
-        try:
-            process = subprocess.Popen(
-                cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-                text=True, encoding='utf-8', errors='replace',
-                creationflags=subprocess.CREATE_NO_WINDOW
-            )
-            for line in process.stdout:
-                self.log(line)
-            process.wait()
-
-            if process.returncode == 0:
-                self.log(f"✅ Готово!\n")
-            else:
-                self.log(f"❌ Ошибка (код {process.returncode})\n")
-        except Exception as e:
-            self.log(f"❌ Ошибка запуска: {e}\n")
-
-    def log(self, text):
-        self.log_text.insert("end", text)
-        self.log_text.see("end")
+            return "Other", []
 
     def start_download(self):
+        if self.is_downloading:
+            return
+
         url = self.entry_url.get().strip()
         start_time = self.entry_start.get().strip()
         end_time = self.entry_end.get().strip()
@@ -165,19 +165,84 @@ class App(ctk.CTk):
             messagebox.showwarning("Внимание", "Вставьте ссылку на видео!")
             return
         if (start_time and not end_time) or (not start_time and end_time):
-            messagebox.showwarning("Внимание", "Для отрезка укажите и начало, и конец (формат ЧЧ:ММ:СС).")
+            messagebox.showwarning("Внимание", "Для отрезка укажите и начало, и конец.")
             return
 
-        self.log_text.delete("1.0", "end")
-        self.btn_download.configure(state="disabled", text="Скачиваю...")
+        self.is_downloading = True
+        self.btn_download.configure(state="disabled", text="Скачиваю...", fg_color="#555555")
+        self.progress_bar.set(0)
+        self.progress_label.configure(text="Подключение к серверу...", text_color=SUBTEXT_COLOR)
 
-        thread = threading.Thread(target=self.download_wrapper, args=(url, start_time, end_time))
+        thread = threading.Thread(target=self.download_thread, args=(url, start_time, end_time))
         thread.daemon = True
         thread.start()
 
-    def download_wrapper(self, url, start_time, end_time):
-        self.download_thread(url, start_time, end_time)
-        self.btn_download.configure(state="normal", text="Скачать")
+    def download_thread(self, url, start_time, end_time):
+        service_name, extra_args = self.get_service_folder(url)
+        target_folder = os.path.join(self.save_path.get(), service_name)
+        
+        # Создаем папки, если их нет
+        os.makedirs(target_folder, exist_ok=True)
+
+        # Формируем аргументы
+        args = ["-S", "vcodec:h264,res,acodec:m4a", "--merge-output-format", "mp4", "-N", "16"]
+        args.extend(extra_args)
+
+        if start_time and end_time:
+            args.extend(["--download-sections", f"*{start_time}-{end_time}"])
+            filename = f"%(title)s [{start_time.replace(':','_')}-{end_time.replace(':','_')}].%(ext)s"
+        else:
+            filename = "%(title)s.%(ext)s"
+
+        output_template = os.path.join(target_folder, filename)
+        args.extend(["-o", output_template, url])
+
+        cmd = [YTDLP_PATH] + args
+
+        try:
+            # Добавляем --newline, чтобы прогресс выводился построчно, а не одной строкой
+            cmd.insert(1, "--newline") 
+            
+            process = subprocess.Popen(
+                cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                text=True, encoding='utf-8', errors='replace',
+                creationflags=subprocess.CREATE_NO_WINDOW
+            )
+
+            # Регулярное выражение для поиска процентов и скорости в логах yt-dlp
+            # Пример лога: [download]  45.2% of  150.00MiB at  2.50MiB/s ETA 00:30
+            pattern = re.compile(r"\[download\]\s+([\d\.]+)%\s+of\s+([\d\.]+\w+)\s+at\s+([\d\.]+\w+/s)\s+ETA\s+([\d:]+)")
+
+            for line in process.stdout:
+                match = pattern.search(line)
+                if match:
+                    percent = float(match.group(1)) / 100.0
+                    speed = match.group(3)
+                    eta = match.group(4)
+                    
+                    # Обновляем UI из потока
+                    self.progress_bar.set(percent)
+                    self.progress_label.configure(
+                        text=f"{match.group(1)}% • Скорость: {speed} • Осталось: {eta}",
+                        text_color=TEXT_COLOR
+                    )
+                elif "[ExtractAudio]" in line or "[Merger]" in line:
+                    self.progress_label.configure(text="Обработка (склейка/конвертация)...", text_color=SUBTEXT_COLOR)
+                    self.progress_bar.set(0.99) # Показываем, что почти готово
+
+            process.wait()
+
+            if process.returncode == 0:
+                self.progress_bar.set(1.0)
+                self.progress_label.configure(text="✅ Успешно скачано!", text_color="#4CAF50")
+            else:
+                self.progress_label.configure(text="❌ Ошибка при скачивании", text_color=ACCENT_COLOR)
+
+        except Exception as e:
+            self.progress_label.configure(text=f"❌ Ошибка: {e}", text_color=ACCENT_COLOR)
+        finally:
+            self.is_downloading = False
+            self.btn_download.configure(state="normal", text="Скачать", fg_color=ACCENT_COLOR)
 
 if __name__ == "__main__":
     app = App()
