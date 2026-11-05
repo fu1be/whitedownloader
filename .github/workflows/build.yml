@@ -1,0 +1,40 @@
+name: Build Windows EXE
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Download and Extract FFmpeg
+        run: |
+          curl -L -o ffmpeg.zip https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip
+          unzip ffmpeg.zip
+          mv ffmpeg-*-essentials_build/bin/ffmpeg.exe .
+          mv ffmpeg-*-essentials_build/bin/ffprobe.exe .
+
+      - name: Build EXE with PyInstaller
+        run: |
+          pyinstaller --onefile --windowed --name VideoDownloader --add-data "yt-dlp.exe;." --add-data "ffmpeg.exe;." --add-data "ffprobe.exe;." app.py
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: VideoDownloader-exe
+          path: dist/VideoDownloader.exe
