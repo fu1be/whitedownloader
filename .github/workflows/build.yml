@@ -31,7 +31,7 @@ jobs:
 
       - name: Build EXE with PyInstaller
         run: |
-          pyinstaller --onefile --windowed --name whitedownloader --add-data "yt-dlp.exe;." --add-data "ffmpeg.exe;." --add-data "ffprobe.exe;." --add-data "resotyg.ttf;." --add-data "threat.ttf;." app.py
+          pyinstaller --onefile --windowed --name whitedownloader --add-data "yt-dlp.exe;." --add-data "ffmpeg.exe;." --add-data "ffprobe.exe;." --add-data "ResotYgPERSONALUSE.otf;." --add-data "threat.otf;." app.py
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
