@@ -15,20 +15,19 @@ else:
     BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 YTDLP_PATH = os.path.join(BASE_DIR, "yt-dlp.exe")
-LOGO_PATH = os.path.join(BASE_DIR, "logo.png") # Имя файла логотипа
+LOGO_PATH = os.path.join(BASE_DIR, "logo.png") 
 
 # ================== СТИЛИ ==================
 ctk.set_appearance_mode("dark")
 
-# Цветовая палитра (Глубокий черный + Яркий красный)
-BG_COLOR = "#0F0F0F"          # Основной фон (почти черный)
-CARD_COLOR = "#1A1A1A"        # Фон карточек
-TEXT_COLOR = "#FFFFFF"        # Белый текст
-SUBTEXT_COLOR = "#888888"     # Серый текст
-ACCENT_COLOR = "#FF3B30"      # Яркий красный
-ACCENT_HOVER = "#D32F2F"      # Темно-красный при наведении
-ENTRY_BG = "#262626"          # Фон полей ввода
-BORDER_COLOR = "#333333"      # Цвет рамок
+BG_COLOR = "#0F0F0F"          
+CARD_COLOR = "#1A1A1A"        
+TEXT_COLOR = "#FFFFFF"        
+SUBTEXT_COLOR = "#888888"     
+ACCENT_COLOR = "#FF3B30"      
+ACCENT_HOVER = "#D32F2F"      
+ENTRY_BG = "#262626"          
+BORDER_COLOR = "#333333"      
 
 class App(ctk.CTk):
     def __init__(self):
@@ -60,9 +59,7 @@ class App(ctk.CTk):
 
         # --- Логотип ---
         try:
-            # Загружаем и масштабируем логотип
             logo_image = Image.open(LOGO_PATH)
-            # Масштабируем до нужного размера (ширина 250)
             width_percent = (250 / float(logo_image.size[0]))
             height_size = int((float(logo_image.size[1]) * float(width_percent)))
             logo_image = logo_image.resize((250, height_size), Image.Resampling.LANCZOS)
@@ -71,7 +68,6 @@ class App(ctk.CTk):
             self.logo_label = ctk.CTkLabel(self, image=self.logo_ctk, text="")
             self.logo_label.pack(pady=(10, 20))
         except Exception as e:
-            # Если логотип не найден, показываем текст
             self.logo_label = ctk.CTkLabel(self, text="whitedownloader", font=ctk.CTkFont(size=32, weight="bold"), text_color=TEXT_COLOR)
             self.logo_label.pack(pady=(20, 20))
 
@@ -154,14 +150,8 @@ class App(ctk.CTk):
         self.geometry(f"+{x}+{y}")
 
     def minimize(self):
-        # Чтобы свернуть безрамочное окно, нужно временно вернуть рамку
         self.overrideredirect(False)
         self.iconify()
-
-    # При восстановлении окна снова убираем рамку
-    def <Map>(self, event):
-        if str(event.widget) == str(self):
-            self.overrideredirect(True)
 
     def browse_folder(self):
         folder = filedialog.askdirectory(initialdir=self.save_path.get())
